@@ -5,7 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Регистрация — УниФорум</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .error-message {
+      color: #dc3545;
+      font-size: 0.875em;
+      margin-top: 0.25rem;
+    }
+    .success-message {
+      color: #198754;
+      font-size: 0.875em;
+      margin-top: 0.25rem;
+    }
+  </style>
 </head>
 <body class="d-flex align-items-center vh-100 bg-light">
   <div class="container">
@@ -18,26 +29,22 @@
               <div class="mb-3">
                 <label for="username" class="form-label">Логин</label>
                 <input type="text" class="form-control" id="username" required>
+                <div id="usernameError" class="error-message"></div>
               </div>
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" class="form-control" id="email" required>
+                <div id="emailError" class="error-message"></div>
               </div>
               <div class="mb-3">
                 <label for="password" class="form-label">Пароль</label>
                 <input type="password" class="form-control" id="password" required>
-              </div>
-              <div class="mb-3">
-                <label for="role" class="form-label">Роль</label>
-                <select class="form-select" id="role" required>
-                  <option value="USER">Студент</option>
-                  <option value="MODERATOR">Преподаватель</option>
-                  <option value="ADMIN">Админ</option>
-                </select>
+                <div id="passwordError" class="error-message"></div>
               </div>
               <div class="d-grid">
                 <button type="submit" class="btn btn-success">Зарегистрироваться</button>
               </div>
+              <div id="formMessage" class="mt-2 text-center"></div>
             </form>
             <div class="mt-3 text-center">
               <a href="login.html">Уже есть аккаунт? Войти</a>
@@ -49,18 +56,66 @@
   </div>
 
   <script>
-    document.getElementById('registerForm').addEventListener('submit', async e => {
+    const API_URL = 'http://localhost:8080/api/auth/register';
+
+    function clearErrors() {
+      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+      document.getElementById('formMessage').textContent = '';
+    }
+
+    async function handleSubmit(e) {
       e.preventDefault();
-      const data = {
+      clearErrors();
+
+      const formData = {
         username: e.target.username.value,
-        email: e.target.email.value,
         password: e.target.password.value,
-        role: e.target.role.value
+        email: e.target.email.value
       };
-      // TODO: отправить POST на /api/auth/register с данными из data
-      // После успешной регистрации — редирект на login.html
-    });
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (data.message) {
+            document.getElementById('formMessage').textContent = data.message;
+          }
+          if (data.errors) {
+            data.errors.forEach(err => {
+              const field = err.field;
+              const message = err.defaultMessage;
+              const errorElement = document.getElementById(`${field}Error`);
+              if (errorElement) {
+                errorElement.textContent = message;
+              }
+            });
+          }
+          return;
+        }
+
+        document.getElementById('formMessage').textContent = 'Регистрация успешна! Перенаправление...';
+        document.getElementById('formMessage').classList.add('success-message');
+        
+        // Редирект через 2 секунды
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+
+      } catch (error) {
+        document.getElementById('formMessage').textContent = 'Ошибка соединения с сервером';
+        console.error('Error:', error);
+      }
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', handleSubmit);
   </script>
-  <script src="js/main.js"></script>
 </body>
 </html>
